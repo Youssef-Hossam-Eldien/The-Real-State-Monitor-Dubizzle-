@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Dashboard Preview](Screenshots/Dashboard_1.jpg)
+
 
 [![Power BI](https://img.shields.io/badge/Power%20BI-F2C811?style=for-the-badge&logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
 [![n8n](https://img.shields.io/badge/n8n-EA4B71?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io/)
