@@ -1,0 +1,532 @@
+{
+  "name": "Real State Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "=GET",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            },
+            {
+              "name": "Accept",
+              "value": " text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -48,
+        112
+      ],
+      "id": "7009ab8d-4f63-452c-92ae-1de79127a486",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "binary",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "Total Price",
+              "cssSelector": "[aria-label=\"Price\"] span",
+              "returnArray": true
+            },
+            {
+              "key": "beds",
+              "cssSelector": "[aria-label=\"Beds\"] span",
+              "returnArray": true
+            },
+            {
+              "key": "bathrooms",
+              "cssSelector": "[aria-label=\"Bathrooms\"] span",
+              "returnArray": true
+            },
+            {
+              "key": "area",
+              "cssSelector": "[aria-label=\"Area\"] span",
+              "returnArray": true
+            },
+            {
+              "key": "title",
+              "cssSelector": "[aria-label=\"Title\"]",
+              "returnArray": true
+            },
+            {
+              "key": "location",
+              "cssSelector": "[aria-label=\"Location\"]",
+              "returnArray": true
+            },
+            {
+              "key": "listing_date",
+              "cssSelector": "[aria-label=\"Creation date\"]",
+              "returnArray": true
+            },
+            {
+              "key": "agency",
+              "cssSelector": "[aria-label=\"Agency photo\"]",
+              "returnValue": "attribute",
+              "attribute": "title",
+              "returnArray": true
+            },
+            {
+              "key": "listing_url",
+              "cssSelector": "[aria-label=\"Listing\"]",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            },
+            {
+              "key": "description",
+              "cssSelector": "[aria-label=\"Description\"] span"
+            },
+            {
+              "key": "verified",
+              "cssSelector": "[aria-label=\"Verified\"]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        112,
+        208
+      ],
+      "id": "ff25c8b6-f090-43b9-b123-ddbbeee88359",
+      "name": "HTML",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Real Estate Scraper & Scoring System v4.0\n * Ultra Strict Edition - Max 5 Alerts Per Run\n */\n\n// 1. Configuration\nconst CONFIG = {\n    PPM_LIMITS: { \n        STEAL: 25000,      // Absolute steal\n        GOOD: 35000,       // Very good\n        AVERAGE: 50000,    // Market average\n        MIN_VALID: 15000   // Below this = scam\n    },\n    TOTAL_PRICE_LIMITS: { \n        BUDGET: 3000000,   // Rare find\n        MID_RANGE: 5000000 // Affordable\n    },\n    AREA_LIMITS: { \n        MIN_OPTIMAL: 150,  // Minimum good size\n        MAX_OPTIMAL: 200   // Maximum optimal\n    },\n    SCORE_LIMITS: { \n        EXCELLENT: 13,     // Only the best\n        GOOD: 8            // Good deals\n    },\n    ALERT: {\n        MIN_SCORE: 13,     // Minimum score for alert\n        MAX_PPM: 25000,    // Maximum PPM for alert\n        MAX_PRICE: 3000000,// Maximum price for alert\n        MIN_BEDS: 3        // Minimum beds for alert\n    },\n    DOMAIN: \"https://www.dubizzle.com.eg\"\n};\n\n// 2. Helper Functions\nconst cleanNumeric = (val) => {\n    if (!val) return 0;\n    return Number(String(val).replace(/[^\\d.]/g, '')) || 0;\n};\n\nconst getSafeArray = (val) => Array.isArray(val) ? val : [val];\n\nconst results = [];\n\nfor (const item of $input.all()) {\n    const data = item.json;\n\n    const fields = {\n        prices:    getSafeArray(data[\"Total Price\"]),\n        beds:      getSafeArray(data[\"beds\"]),\n        bathrooms: getSafeArray(data[\"bathrooms\"]),\n        areas:     getSafeArray(data[\"area\"]),\n        titles:    getSafeArray(data[\"title\"]),\n        locations: getSafeArray(data[\"location\"]),\n        dates:     getSafeArray(data[\"listing_date\"]),\n        urls:      getSafeArray(data[\"listing_url\"]),\n        verified:  getSafeArray(data[\"verified\"]),\n    };\n\n    for (let i = 0; i < fields.prices.length; i++) {\n        const rawPrice = String(fields.prices[i] || \"\");\n        if (!rawPrice.includes(\"EGP\")) continue;\n\n        const cleanPrice = cleanNumeric(rawPrice);\n        const cleanArea  = cleanNumeric(fields.areas[i]);\n\n        // Data Integrity Check\n        if (cleanPrice <= 0 || cleanArea <= 0) continue;\n\n        const ppm     = Math.round(cleanPrice / cleanArea);\n        const fullUrl = String(fields.urls[i] || \"\").startsWith(\"http\")\n            ? fields.urls[i]\n            : `${CONFIG.DOMAIN}${fields.urls[i]}`;\n\n        // --- Scoring ---\n        let score = 0;\n        const reasons = [];\n\n        // A. Price Per SQM (Weight: 6)\n        if (ppm > CONFIG.PPM_LIMITS.MIN_VALID && ppm < CONFIG.PPM_LIMITS.STEAL) {\n            score += 6; reasons.push(\"Exceptional PPM 🔥\");\n        } else if (ppm >= CONFIG.PPM_LIMITS.STEAL && ppm < CONFIG.PPM_LIMITS.GOOD) {\n            score += 4; reasons.push(\"Good PPM 💰\");\n        } else if (ppm >= CONFIG.PPM_LIMITS.GOOD && ppm < CONFIG.PPM_LIMITS.AVERAGE) {\n            score += 2;\n        }\n\n        // B. Total Price (Weight: 2)\n        if (cleanPrice > 0 && cleanPrice < CONFIG.TOTAL_PRICE_LIMITS.BUDGET) {\n            score += 2; reasons.push(\"Budget Friendly 💚\");\n        } else if (cleanPrice < CONFIG.TOTAL_PRICE_LIMITS.MID_RANGE) {\n            score += 1;\n        }\n\n        // C. Area (Weight: 2)\n        if (cleanArea >= CONFIG.AREA_LIMITS.MIN_OPTIMAL && cleanArea <= CONFIG.AREA_LIMITS.MAX_OPTIMAL) {\n            score += 2; reasons.push(\"Optimal Size 📐\");\n        } else if (cleanArea > CONFIG.AREA_LIMITS.MAX_OPTIMAL) {\n            score += 1;\n        }\n\n        // D. Verification (Weight: 2)\n        const isVerified = String(fields.verified[i] || \"\").includes(\"Yes\");\n        if (isVerified) {\n            score += 2; reasons.push(\"Verified Seller ✅\");\n        }\n\n        // E. Bedrooms (Weight: 1)\n        const bedsCount = Number(fields.beds[i]) || 0;\n        if (bedsCount >= CONFIG.ALERT.MIN_BEDS) {\n            score += 1; reasons.push(\"Family Size 🛏\");\n        }\n\n        // F. Freshness (Weight: 1)\n        const isFresh = String(fields.dates[i] || \"\").includes(\"hour\");\n        if (isFresh) {\n            score += 1; reasons.push(\"New Listing ⚡\");\n        }\n\n        // G. Bonus - Both Exceptional PPM AND Budget Price\n        if (ppm < CONFIG.PPM_LIMITS.STEAL && cleanPrice < CONFIG.TOTAL_PRICE_LIMITS.BUDGET) {\n            score += 2; reasons.push(\"Double Value Bonus 💎\");\n        }\n\n        // --- Classification ---\n        const dealLabel = score >= CONFIG.SCORE_LIMITS.EXCELLENT ? \"Excellent Deal 🔥\" :\n                          score >= CONFIG.SCORE_LIMITS.GOOD ? \"Good Deal 🟢\" :\n                          \"Normal 🟡\";\n\n        // --- Ultra Strict Alert Conditions ---\n        // ALL 5 conditions must be true\n        const isActionable = (\n            score >= CONFIG.ALERT.MIN_SCORE &&        // Very high score\n            ppm < CONFIG.ALERT.MAX_PPM &&             // Absolute steal PPM\n            isVerified &&                              // Must be verified\n            cleanPrice < CONFIG.ALERT.MAX_PRICE &&    // Must be affordable\n            bedsCount >= CONFIG.ALERT.MIN_BEDS        // Must be family size\n        );\n\n        results.push({\n            json: {\n                id:            Buffer.from(fullUrl).toString('base64').substring(0, 12),\n                price:         cleanPrice,\n                beds:          bedsCount,\n                bathrooms:     fields.bathrooms[i] || \"\",\n                area:          cleanArea,\n                price_per_sqm: ppm,\n                title:         fields.titles[i] || \"\",\n                location:      fields.locations[i] || \"N/A\",\n                listing_date:  fields.dates[i] || \"\",\n                listing_url:   fullUrl,\n                verified:      isVerified ? \"Yes\" : \"No\",\n                deal_score:    score,\n                deal_label:    dealLabel,\n                deal_reasons:  reasons.join(\", \"),\n                is_actionable: isActionable,\n                analyzed_at:   new Date().toISOString(),\n            }\n        });\n    }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -96
+      ],
+      "id": "a13fd5bf-3c55-450c-b1ae-f38f90c57902",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const baseURL = \"https://www.dubizzle.com.eg/en/properties/apartments-duplex-for-sale/cairo/?page=\";\nconst totalPages = 5; // reduce from 5 to 3\nconst results = [];\n\nfor (let i = 1; i <= totalPages; i++) {\n  results.push({ json: { url: baseURL + i } });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        240
+      ],
+      "id": "0a600dec-942a-4ec5-a312-43a43eb28319",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "url",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -32
+      ],
+      "id": "109cf2e3-36dc-4ad5-b404-cabfd862f637",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Krw8oj8WtcbiubMS956mHUYNF7tZQp6BpE395b7HlpE",
+          "mode": "list",
+          "cachedResultName": "Dubizzle Properties",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Krw8oj8WtcbiubMS956mHUYNF7tZQp6BpE395b7HlpE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2036405785,
+          "mode": "list",
+          "cachedResultName": "الورقة2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Krw8oj8WtcbiubMS956mHUYNF7tZQp6BpE395b7HlpE/edit#gid=2036405785"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "beds",
+              "displayName": "beds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "bathrooms",
+              "displayName": "bathrooms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "price_per_sqm",
+              "displayName": "price_per_sqm",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "listing_date",
+              "displayName": "listing_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "listing_url",
+              "displayName": "listing_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "verified",
+              "displayName": "verified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "deal_score",
+              "displayName": "deal_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "deal_label",
+              "displayName": "deal_label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "deal_reasons",
+              "displayName": "deal_reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "analyzed_at",
+              "displayName": "analyzed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "is_actionable",
+              "displayName": "is_actionable",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        784,
+        112
+      ],
+      "id": "f283aa01-2214-48e6-8cd2-0ed1b7dd4911",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ZRWcLmNdIL8B6IuY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a8867a8a-4593-44c9-9d38-23f2ea69a834",
+              "leftValue": "={{ $json.deal_score }}",
+              "rightValue": 13,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        464,
+        240
+      ],
+      "id": "717e7e03-602b-4f74-8fd4-aa00ec7f5f53",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        112
+      ],
+      "id": "41ba1db5-6d91-455f-a9e8-557633b94d5e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "chatId": "6846020422",
+        "text": "=🔥 Good Deal Found on Dubizzle!  📍 Location: {{ $json.location }} 💰 Price: {{ $json.price }} EGP 📐 Area: {{ $json.area }} sqm 🛏 Beds: {{ $json.beds }} 🚿 Baths: {{ $json.bathrooms }} 💵 Price/sqm: {{ $json.price_per_sqm }} EGP 🏷 Deal: {{ $json.deal_label }} 🔗 Link: {{ $json.listing_url }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        16
+      ],
+      "id": "91bf0246-bae1-4d6e-b02d-0efef2ee42b2",
+      "name": "Send a text message",
+      "webhookId": "5058fbb5-5727-4ff8-9890-c10b455de142",
+      "credentials": {
+        "telegramApi": {
+          "id": "Jz1GzD8S5o2ai9p5",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5da3b2b7-1170-40ba-818c-d218b25ece9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "951b90be7fa94770afe67905cf41d73bc027e3fe5e1a58e8dbb105bc0d3bd6a2"
+  },
+  "id": "LTAtI9kKH4spVJjE",
+  "tags": []
+}
