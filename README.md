@@ -80,7 +80,7 @@
 ### Page 1 — Real Estate Deal Hunter
 > Identifies good deals vs normal listings across Cairo districts
 
-![Dashboard 1](Screenshots/Dashboard_1.jpg)
+![Dashboard 1](Screenshots/Dashboard%201.jpg)
 
 **KPIs:** Total Listings (1,289) • Good Deals (242) • Avg Price 4.29M • Good Deals 19%
 
@@ -91,7 +91,7 @@
 ### Page 2 — Market Structure Analysis
 > Deep dive into market segmentation and property characteristics
 
-![Dashboard 2](Screenshots/Dashboard_2.jpg)
+![Dashboard 2](Screenshots/Dashboard%202.jpg)
 
 **KPIs:** Avg PPM 51.16K • Median Price 7M • Avg Area 167 m² • Luxury Count 179
 
@@ -102,7 +102,7 @@
 ### Page 3 — Market Intelligence Hub
 > Value-for-money intelligence and district-level opportunity scoring
 
-![Dashboard 3](Screenshots/Dashboard_3.jpg)
+![Dashboard 3](Screenshots/Dashboard%203.jpg)
 
 **KPIs:** Avg Deal Score 4.62 • Cheapest Area R8 • Best Score Mokattam • Last Update 2026-04-10
 
@@ -113,7 +113,7 @@
 ### Page 4 — Value Drivers Analysis
 > What actually drives property value — bedrooms, bathrooms & size
 
-![Dashboard 4](Screenshots/Dashboard_4.jpg)
+![Dashboard 4](Screenshots/Dashboard%204.jpg)
 
 **KPIs:** Value/Bathroom 3.19M • Value/Bed 2.89M • Beds:Baths Ratio 1.1 • PPM Range 288.43K
 
