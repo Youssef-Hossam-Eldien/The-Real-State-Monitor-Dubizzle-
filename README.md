@@ -121,7 +121,7 @@
 
 ---
 
-## 🎨 Design | التصميم
+## Design | التصميم
 
 > Dashboard backgrounds were custom-designed in **Figma** to match the Dubizzle brand identity — using the official red/white color scheme with clean professional layouts, then exported as PNG and embedded directly into Power BI.
 
