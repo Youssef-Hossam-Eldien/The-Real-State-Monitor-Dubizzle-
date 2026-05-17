@@ -1,4 +1,4 @@
-                                             # Real Estate Deal Hunter — Dubizzle Egypt
+  # Real Estate Deal Hunter — Dubizzle Egypt
 
 <div align="center">
 
