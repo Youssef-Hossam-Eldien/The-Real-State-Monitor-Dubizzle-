@@ -127,7 +127,7 @@ What actually drives property value — bedrooms, bathrooms & size
 
 ## Design | التصميم
 
-> Dashboard backgrounds were custom-designed in **Figma** to match the Dubizzle brand identity — using the official red/white color scheme with clean professional layouts, then exported as PNG and embedded directly into Power BI.
+Dashboard backgrounds were custom-designed in **Figma** to match the Dubizzle brand identity — using the official red/white color scheme with clean professional layouts, then exported as PNG and embedded directly into Power BI.
 
 ---
 
