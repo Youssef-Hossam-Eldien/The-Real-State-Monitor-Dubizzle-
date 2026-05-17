@@ -82,7 +82,7 @@
 ## Dashboard Pages
 
 ### Page 1 — Real Estate Deal Hunter
-> Identifies good deals vs normal listings across Cairo districts
+Identifies good deals vs normal listings across Cairo districts
 
 ![Dashboard 1](Screenshots/Dashboard%201.jpg)
 
@@ -93,7 +93,7 @@
 ---
 
 ### Page 2 — Market Structure Analysis
-> Deep dive into market segmentation and property characteristics
+Deep dive into market segmentation and property characteristics
 
 ![Dashboard 2](Screenshots/Dashboard%202.jpg)
 
@@ -104,7 +104,7 @@
 ---
 
 ### Page 3 — Market Intelligence Hub
-> Value-for-money intelligence and district-level opportunity scoring
+Value-for-money intelligence and district-level opportunity scoring
 
 ![Dashboard 3](Screenshots/Dashboard%203.jpg)
 
@@ -115,7 +115,7 @@
 ---
 
 ### Page 4 — Value Drivers Analysis
-> What actually drives property value — bedrooms, bathrooms & size
+What actually drives property value — bedrooms, bathrooms & size
 
 ![Dashboard 4](Screenshots/Dashboard%204.jpg)
 
