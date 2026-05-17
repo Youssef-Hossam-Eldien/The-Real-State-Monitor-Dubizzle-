@@ -20,7 +20,7 @@
 
 ## Project Overview | نظرة عامة
 
-> **EN:** This project is a full real estate monitoring pipeline built on Dubizzle Egypt. It automatically scrapes property listings, detects new deals, sends instant Telegram notifications, and presents deep market analysis through a professionally designed Power BI dashboard — with a custom background designed in Figma.
+ This project is a full real estate monitoring pipeline built on Dubizzle Egypt. It automatically scrapes property listings, detects new deals, sends instant Telegram notifications, and presents deep market analysis through a professionally designed Power BI dashboard — with a custom background designed in Figma.
 
 نظام متكامل (End-to-End) لمراقبة وتحليل سوق العقارات في مصر (Dubizzle).
 يعمل النظام بآلية أتمتة كاملة تبدأ بجمع البيانات لحظياً، ثم معالجتها للكشف عن الفرص الاستثمارية المميزة (Good Deals) باستخدام خوارزميات تحليل السعر والمساحة. يتضمن المشروع:
