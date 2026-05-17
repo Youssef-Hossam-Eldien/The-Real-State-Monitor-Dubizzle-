@@ -67,7 +67,7 @@
 
 | Step | Node | Description |
 |---|---|---|
-| 1 | ⚡ **Trigger** | Manual or scheduled execution |
+| 1 | **Trigger** | Manual or scheduled execution |
 | 2 | **Code (JS)** | Builds the HTTP request parameters |
 | 3 | **Split Out** | Splits listings into individual items |
 | 4 | **HTTP Request** | Fetches live data from Dubizzle |
@@ -79,7 +79,7 @@
 
 ---
 
-## 📊 Dashboard Pages
+## Dashboard Pages
 
 ### Page 1 — Real Estate Deal Hunter
 > Identifies good deals vs normal listings across Cairo districts
@@ -200,6 +200,6 @@ The-Real-State-Monitor-Dubizzle/
 
 ⭐ **If you found this useful, drop a star!** ⭐
 
-*Built with ❤️ by Youssef Hossam*
+*Built by Youssef Hossam*
 
 </div>
